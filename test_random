@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jul 21 13:42:07 2025
+
+We are trying out sampling random numbers for a distribution.
+"""
+
+import numpy
+#from numpy.random import randn
+#from numpy.random import rand
+
+
+# number of random samples from a given distribution to be generated
+sample_size = 10000
+
+
+
+"""
+create an array of rnadom numbers from the uniform distribution on [0,1]
+"""
+table1 = numpy.random.rand( sample_size )
+#
+#  the mean of these samples should be 0.5, the standard deviation sd=1/sqrt(12)=0.288
+#compute mean and sd.
+#  do it the hard way
+mean=0.
+sd0=0.
+for i in range( sample_size ):
+     mean += table1[i]
+     sd0 += table1[i]**2
+mean = mean / sample_size
+sd0   = sd0 / sample_size
+sd   = numpy.sqrt( sd0 - mean**2 )
+
+#or simply use the built-in numpy routines:
+#mean = numpy.mean( table1 )
+#sd = numpy.std( table1 )
+
+# note that we have computed the population standard deviation
+print( "Uniform distribution in [0,1].  \t\t\t The mean is: %.3f  \t SD is %.3f"  %(mean, sd ) )
+
+
+#########################################################
+"""
+create an array of random numbers from the uniform distribution on [ my_low, my_high ]
+"""
+my_low = -5.0
+my_high = 5.0
+# cerate the table the hard way:
+#table2 = my_low + numpy.random.rand( sample_size ) * ( my_high - my_low ])
+#  or the easy way
+table2 = numpy.random.uniform(low=my_low, high=my_high, size=sample_size )
+mean = numpy.mean( table2 )
+sd = numpy.std( table2 )
+
+print( "Uniform distriburion in [%.2f,%.2f].  \t The mean is: %.3f  \t SD is %.3f" %(my_low, my_high, mean, sd ) )
+
+#########################################################
+"""
+create an array of random numbers from the standard normal distribution N(0,1) using numpy.random.randn
+"""
+table3 = numpy.random.randn(  sample_size )
+#
+mean = numpy.mean( table3 )
+sd = numpy.std( table3 )
+
+print( "Standard Normal distribution.  \t\t\t The mean is: %.3f  \t SD is %.3f" %(  mean, sd ) )
+
+##########################################################
+"""
+create an array of random numbers from the normal distribution N(my_mean, my_sd ) using numpy.random.normal
+"""
+my_mean = 0
+my_sd = 1
+table4 = numpy.random.normal( loc=my_mean, scale=1,  size=sample_size )
+
+mean = numpy.mean( table4 )
+sd = numpy.std( table4 )
+
+print( "Normal distribution.  \t\t\t\t\t\t The mean is: %.3f  \t SD is %.3f" %(  mean, sd ) )
+
+
+"""
+Now we do a toin toss, HEAD has probability prob
+"""
+#
+print("Let's do a loaded coin toss.")
+#   toss a coin
+prob = float(input("enter a probability between 0 and 1: "))
+if ( (prob < 0) or (prob > 1) ):
+    print("\t number out of range, adjusted to 0.5")
+    prob = 0.5
+
+r=numpy.random.rand()
+if ( r < prob):
+    print("HEAD: r= %.3f \t prob= %.3f" % (r, prob)  )
+else:
+    print("TAIL: r= %.3f \t prob= %.3f" % (r, prob)  ) 
+    
+########################################################
+"""
+we 'seed' the random number generating algorithm. the numbers are no longer random !
+Different seed values will give different sequences of numbers
+"""
+print("Seeding gives a fixed sequence of 'random' numbers")
+for i in range(5):
+    numpy.random.seed(10)
+    table5 = numpy.random.rand( 4 )     # create a sequence of 5 random numbers
+    print("seeded, i=", i, " : ", table5 )
+
+print("A different seed will give a different sequence")   
+for i in range(5):
+    numpy.random.seed(255)
+    table5 = numpy.random.rand( 4 )     # create a sequence of 5 random numbers
+    print("seeded, i=", i, " : ", table5 ) 
+ 
