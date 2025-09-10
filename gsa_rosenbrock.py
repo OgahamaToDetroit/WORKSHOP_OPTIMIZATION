@@ -2,26 +2,19 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import os # Import the os module to handle file paths
 
 # --- 1. Define the Fitness Function ---
 def fitness_function(pos_2d):
     x1, x2 = pos_2d[0], pos_2d[1]
     return 100 * (x1**2 - x2)**2 + (1 - x1)**2
 
-# --- Main GSA Algorithm Function (Callable by other scripts) ---
+# --- Main GSA Algorithm Function ---
 def run_gsa(show_logs=True, seed=None):
-    """
-    Runs the Gravitational Search Algorithm for the Rosenbrock function.
-    Args:
-        show_logs (bool): If True, prints iteration-by-iteration results.
-        seed (int, optional): A random seed for reproducibility. Defaults to None.
-    Returns:
-        tuple: A tuple containing results needed for visualization.
-    """
-    # --- Algorithm Parameters (Running for 1000 iterations) ---
+    # --- Algorithm Parameters (Paper-Compliant Values for Full Run) ---
     N = 20
     D = 2
-    max_iter = 1000  # << Running for 1000 iterations to get full data
+    max_iter = 1000
     G0 = 100
     alpha = 20
     epsilon = 1e-7
@@ -99,13 +92,16 @@ def run_gsa(show_logs=True, seed=None):
 
     return best_agent_fitness, best_agent_position, positions_history, best_fitness_history
 
-# This block runs only when the script is executed directly for visualization
 if __name__ == "__main__":
-    # Run GSA once with a fixed seed for consistent visualization
     fitness, position, positions_history, best_fitness_history = run_gsa(show_logs=True, seed=42)
     
     print("Generating visualizations...")
-    
+
+    # --- Create output directory ---
+    output_dir = "gsa_rosenbrock_output"
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Output files will be saved in '{output_dir}/'")
+
     # --- Prepare data for contour plots ---
     max_iter_full = 1000
     lower_bound = -2
@@ -115,22 +111,23 @@ if __name__ == "__main__":
     X, Y = np.meshgrid(x_plot, y_plot)
     Z = fitness_function([X, Y])
 
-    # --- FIGURE A: Convergence Graph (Presentation Requirement 3b) for 100 iters ---
-    fig_conv_100, ax_conv_100 = plt.subplots(figsize=(10, 6))
-    iterations_to_plot_100 = np.arange(5, 101)
-    fitness_to_plot_100 = best_fitness_history[4:100] # Use first 100 data points
-    ax_conv_100.plot(iterations_to_plot_100, fitness_to_plot_100)
-    ax_conv_100.set_title('Convergence of GSA on Rosenbrock Function (Iterations 5-100)')
-    ax_conv_100.set_xlabel('Iteration k'); ax_conv_100.set_ylabel('Value of the Objective Function (Best Fitness)')
-    ax_conv_100.set_yscale('log'); ax_conv_100.grid(True)
+    # --- FIGURE A: Convergence Graph ---
+    fig_conv, ax_conv = plt.subplots(figsize=(10, 6))
+    iterations_to_plot = np.arange(5, max_iter_full + 1)
+    fitness_to_plot = best_fitness_history[4:]
+    ax_conv.plot(iterations_to_plot, fitness_to_plot)
+    ax_conv.set_title(f'Convergence of GSA (Iterations 5-{max_iter_full})')
+    ax_conv.set_xlabel('Iteration k'); ax_conv.set_ylabel('Value of the Objective Function (Best Fitness)')
+    ax_conv.set_yscale('log'); ax_conv.grid(True)
     plt.tight_layout()
+    fig_conv.savefig(os.path.join(output_dir, 'convergence_1000iter.png'))
 
-    # --- FIGURE B: Animation of First 20 Iterations (Presentation Requirement 3a) ---
+    # --- FIGURE B: Animation of First 20 Iterations ---
     fig_anim_20, ax_anim_20 = plt.subplots(figsize=(8, 7))
     ax_anim_20.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
     ax_anim_20.set_title('GSA Agent Movement (First 20 Iterations)')
     ax_anim_20.set_xlabel('x1'); ax_anim_20.set_ylabel('x2')
-    ax_anim_20.plot(1, 1, 'r*', markersize=15, label='Global Minimum') 
+    ax_anim_20.plot(1, 1, 'r*', markersize=15, label='Global Minimum')
     scatter_20 = ax_anim_20.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='red', s=25)
     iter_text_20 = ax_anim_20.text(0.02, 0.95, '', transform=ax_anim_20.transAxes, color='white', fontsize=12,
                                    bbox=dict(facecolor='black', alpha=0.5))
@@ -140,39 +137,10 @@ if __name__ == "__main__":
         iter_text_20.set_text(f'Iteration: {frame + 1}/20')
         return scatter_20, iter_text_20
     animation_20 = FuncAnimation(fig_anim_20, update_anim_20, frames=20, interval=200, blit=True)
-    animation_20.save('gsa_rosenbrock_anim_20iter.gif', writer='pillow', fps=5)
+    animation_20.save(os.path.join(output_dir, 'gsa_rosenbrock_anim_20iter.gif'), writer='pillow', fps=5)
     print("Animation of first 20 iterations saved successfully.")
 
-    # --- FIGURE C: Animation of Full 100 Iterations ---
-    fig_anim_100, ax_anim_100 = plt.subplots(figsize=(8, 7))
-    ax_anim_100.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
-    ax_anim_100.set_title('GSA Agent Movement (Full 100 Iterations)')
-    ax_anim_100.set_xlabel('x1'); ax_anim_100.set_ylabel('x2')
-    ax_anim_100.plot(1, 1, 'r*', markersize=15, label='Global Minimum')
-    scatter_100 = ax_anim_100.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='red', s=25)
-    iter_text_100 = ax_anim_100.text(0.02, 0.95, '', transform=ax_anim_100.transAxes, color='white', fontsize=12,
-                                       bbox=dict(facecolor='black', alpha=0.5))
-    ax_anim_100.legend()
-    def update_anim_100(frame):
-        scatter_100.set_offsets(positions_history[frame])
-        iter_text_100.set_text(f'Iteration: {frame + 1}/100')
-        return scatter_100, iter_text_100
-    animation_100 = FuncAnimation(fig_anim_100, update_anim_100, frames=100, interval=100, blit=True)
-    animation_100.save('gsa_rosenbrock_anim_100iter.gif', writer='pillow', fps=10)
-    print("Animation of full 100 iterations saved successfully.")
-    
-    # --- FIGURE D: Static Plot of Final Positions at 100 Iterations ---
-    fig_final_100, ax_final_100 = plt.subplots(figsize=(8, 7))
-    ax_final_100.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
-    ax_final_100.set_title('Final Agent Positions at Iteration 100')
-    ax_final_100.set_xlabel('x1'); ax_final_100.set_ylabel('x2')
-    final_positions_100 = positions_history[99] # 100th position
-    ax_final_100.scatter(final_positions_100[:, 0], final_positions_100[:, 1], c='red', s=35, label='Agents at Iteration 100')
-    ax_final_100.plot(1, 1, 'y*', markersize=15, label='Global Minimum')
-    ax_final_100.legend()
-    plt.tight_layout()
-    
-    # --- FIGURE E: Animation of Full 1000 Iterations (NEW) ---
+    # --- FIGURE C: Animation of Full 1000 Iterations ---
     fig_anim_1000, ax_anim_1000 = plt.subplots(figsize=(8, 7))
     ax_anim_1000.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
     ax_anim_1000.set_title(f'GSA Agent Movement (Full {max_iter_full} Iterations)')
@@ -187,19 +155,20 @@ if __name__ == "__main__":
         iter_text_1000.set_text(f'Iteration: {frame + 1}/{max_iter_full}')
         return scatter_1000, iter_text_1000
     animation_1000 = FuncAnimation(fig_anim_1000, update_anim_1000, frames=max_iter_full, interval=20, blit=True)
-    animation_1000.save('gsa_rosenbrock_anim_1000iter.gif', writer='pillow', fps=50)
+    animation_1000.save(os.path.join(output_dir, 'gsa_rosenbrock_anim_1000iter.gif'), writer='pillow', fps=50)
     print(f"Animation of full {max_iter_full} iterations saved successfully.")
 
-    # --- FIGURE F: Static Plot of Final Positions at 1000 Iterations (NEW) ---
+    # --- FIGURE D: Static Plot of Final Positions at 1000 Iterations ---
     fig_final_1000, ax_final_1000 = plt.subplots(figsize=(8, 7))
     ax_final_1000.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
     ax_final_1000.set_title(f'Final Agent Positions at Iteration {max_iter_full}')
     ax_final_1000.set_xlabel('x1'); ax_final_1000.set_ylabel('x2')
-    final_positions_1000 = positions_history[-1] # Last position
+    final_positions_1000 = positions_history[-1]
     ax_final_1000.scatter(final_positions_1000[:, 0], final_positions_1000[:, 1], c='red', s=35, label=f'Agents at Iteration {max_iter_full}')
     ax_final_1000.plot(1, 1, 'y*', markersize=15, label='Global Minimum')
     ax_final_1000.legend()
     plt.tight_layout()
-
+    fig_final_1000.savefig(os.path.join(output_dir, 'final_positions_1000iter.png'))
+    
     plt.show()
 

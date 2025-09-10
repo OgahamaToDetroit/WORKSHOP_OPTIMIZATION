@@ -14,7 +14,7 @@ def run_gsa(show_logs=True, seed=None):
     # --- Algorithm Parameters (100 Iterations Version) ---
     N = 20
     D = 2
-    max_iter = 100 # << Only change is here
+    max_iter = 100
     G0 = 100
     alpha = 20
     epsilon = 1e-7
@@ -124,22 +124,51 @@ if __name__ == "__main__":
 
     # --- FIGURE B: Animation of First 20 Iterations ---
     fig_anim_20, ax_anim_20 = plt.subplots(figsize=(8, 7))
-    # ... (plotting code remains the same)
-    animation_20 = FuncAnimation(fig_anim_20, lambda f: None, frames=20, interval=200, blit=True) # Dummy for structure
+    ax_anim_20.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
+    ax_anim_20.set_title('GSA Agent Movement (First 20 Iterations)')
+    ax_anim_20.set_xlabel('x1'); ax_anim_20.set_ylabel('x2')
+    ax_anim_20.plot(1, 1, 'r*', markersize=15, label='Global Minimum')
+    scatter_20 = ax_anim_20.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='red', s=25)
+    iter_text_20 = ax_anim_20.text(0.02, 0.95, '', transform=ax_anim_20.transAxes, color='white', fontsize=12,
+                                   bbox=dict(facecolor='black', alpha=0.5))
+    ax_anim_20.legend()
+    def update_anim_20(frame):
+        scatter_20.set_offsets(positions_history[frame])
+        iter_text_20.set_text(f'Iteration: {frame + 1}/20')
+        return scatter_20, iter_text_20
+    animation_20 = FuncAnimation(fig_anim_20, update_anim_20, frames=20, interval=200, blit=True)
     animation_20.save(os.path.join(output_dir, 'gsa_rosenbrock_anim_20iter.gif'), writer='pillow', fps=5)
     print("Animation of first 20 iterations saved successfully.")
 
     # --- FIGURE C: Animation of Full 100 Iterations ---
     fig_anim_100, ax_anim_100 = plt.subplots(figsize=(8, 7))
-    # ... (plotting code remains the same)
-    animation_100 = FuncAnimation(fig_anim_100, lambda f: None, frames=max_iter, interval=100, blit=True) # Dummy for structure
+    ax_anim_100.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
+    ax_anim_100.set_title(f'GSA Agent Movement (Full {max_iter} Iterations)')
+    ax_anim_100.set_xlabel('x1'); ax_anim_100.set_ylabel('x2')
+    ax_anim_100.plot(1, 1, 'r*', markersize=15, label='Global Minimum')
+    scatter_100 = ax_anim_100.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='red', s=25)
+    iter_text_100 = ax_anim_100.text(0.02, 0.95, '', transform=ax_anim_100.transAxes, color='white', fontsize=12,
+                                       bbox=dict(facecolor='black', alpha=0.5))
+    ax_anim_100.legend()
+    def update_anim_100(frame):
+        scatter_100.set_offsets(positions_history[frame])
+        iter_text_100.set_text(f'Iteration: {frame + 1}/{max_iter}')
+        return scatter_100, iter_text_100
+    animation_100 = FuncAnimation(fig_anim_100, update_anim_100, frames=max_iter, interval=100, blit=True)
     animation_100.save(os.path.join(output_dir, 'gsa_rosenbrock_anim_100iter.gif'), writer='pillow', fps=10)
     print(f"Animation of full {max_iter} iterations saved successfully.")
 
     # --- FIGURE D: Static Plot of Final Positions at 100 Iterations ---
     fig_final_100, ax_final_100 = plt.subplots(figsize=(8, 7))
-    # ... (plotting code remains the same)
+    ax_final_100.contourf(X, Y, Z, levels=np.logspace(0, 3.5, 35), cmap='viridis', alpha=0.7)
+    ax_final_100.set_title(f'Final Agent Positions at Iteration {max_iter}')
+    ax_final_100.set_xlabel('x1'); ax_final_100.set_ylabel('x2')
+    final_positions_100 = positions_history[-1]
+    ax_final_100.scatter(final_positions_100[:, 0], final_positions_100[:, 1], c='red', s=35, label=f'Agents at Iteration {max_iter}')
+    ax_final_100.plot(1, 1, 'y*', markersize=15, label='Global Minimum')
+    ax_final_100.legend()
     plt.tight_layout()
     fig_final_100.savefig(os.path.join(output_dir, 'final_positions_100iter.png'))
 
     plt.show()
+
