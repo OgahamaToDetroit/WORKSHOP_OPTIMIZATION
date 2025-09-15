@@ -1,175 +1,172 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
+import os
 
 # --- 1. Define the Fitness Function ---
 # Rastrigin function for 2 dimensions.
 def fitness_function(pos_2d):
-    x = pos_2d[0]
-    y = pos_2d[1]
+    x, y = pos_2d[0], pos_2d[1]
     term1 = x**2 - 10 * np.cos(2 * np.pi * x)
     term2 = y**2 - 10 * np.cos(2 * np.pi * y)
     return 20 + term1 + term2
 
-# --- 2. Set Algorithm Parameters ---
-N = 100
-D = 2
-max_iter = 100          # Set  iterations as 
-
-# --- Adjusted Parameters for stronger attraction ---
-G0 = 500               # Increased G0 significantly for stronger initial pull
-alpha = 15             # Slightly reduced alpha to make G decay slower
-epsilon = 1e-7
-
-lower_bound = -5.12
-upper_bound = 5.12
-
-kbest_initial = N
-kbest_final = 1        # Keep kbest_final at 1 to focus on the best agent at the end
-
-# --- 3. Main GSA Algorithm ---
-# --- Step 1: Initialization ---
-positions = lower_bound + (upper_bound - lower_bound) * np.random.rand(N, D)
-velocities = np.zeros((N, D))
-masses = np.zeros(N)
-
-best_agent_position = np.zeros(D)
-best_agent_fitness = float('inf')
-
-# VISUALIZATION: Store the history of agent positions for plotting
-positions_history = []
-
-print(f"Starting GSA... (Searching for the minimum of Rastrigin function in {max_iter} iterations)")
-print("-" * 80)
-
-# --- Start the main iteration loop ---
-for t in range(max_iter):
-    # Store the current positions for visualization
-    positions_history.append(positions.copy())
-
-    # --- Step 2: Fitness Evaluation and Mass Calculation ---
-    fitness_values = np.array([fitness_function(p) for p in positions])
-    best_fitness = np.min(fitness_values)
-    worst_fitness = np.max(fitness_values)
+# --- Main GSA Algorithm Function ---
+def run_gsa(show_logs=True, seed=None):
+    # --- Parameters from original gsa2d_vi.py ---
+    N = 100
+    D = 2
+    max_iter = 100
+    G0 = 500
+    alpha = 15
+    epsilon = 1e-7
+    lower_bound = -5.12
+    upper_bound = 5.12
+    kbest_initial = N
+    kbest_final = 1
     
-    if best_fitness < best_agent_fitness:
-        best_agent_fitness = best_fitness
-        best_agent_position = positions[np.argmin(fitness_values)].copy()
-
-    m_normalized = (fitness_values - worst_fitness) / (best_fitness - worst_fitness + epsilon)
-    masses = m_normalized / (np.sum(m_normalized) + epsilon)
-
-    G = G0 * math.exp(-alpha * t / max_iter)
-
-    kbest = round(kbest_initial - (kbest_initial - kbest_final) * (t / max_iter))
-    sorted_indices = np.argsort(fitness_values)
-
-    # --- Step 3 & 4: Calculate Force and Acceleration ---
-    forces = np.zeros((N, D))
-    accelerations = np.zeros((N, D))
-
-    for i in range(N):
-        total_force_on_i = np.zeros(D)
-        for j_idx in sorted_indices[0:kbest]:
-            j = j_idx
-            if i != j:
-                displacement_vec = positions[j] - positions[i]
-                distance = np.linalg.norm(displacement_vec)
-                # Ensure random_rand() is called once per force component if needed,
-                # but for total_force_on_i, it's typically applied to the whole vector.
-                force_ij = G * (masses[i] * masses[j] / (distance + epsilon)) * displacement_vec
-                total_force_on_i += np.random.rand() * force_ij # Apply random factor here
+    if seed is not None:
+        np.random.seed(seed)
         
-        forces[i] = total_force_on_i
-        accelerations[i] = forces[i] / (masses[i] + epsilon)
+    positions = lower_bound + (upper_bound - lower_bound) * np.random.rand(N, D)
+    velocities = np.zeros((N, D))
+    best_agent_position = np.zeros(D)
+    best_agent_fitness = float('inf')
 
-    # --- Step 5 & 6: Update Velocity and Position ---
-    # Apply a random factor to current velocity components for more dynamism
-    velocities = np.random.rand(N, D) * velocities + accelerations 
-    positions = positions + velocities
-    positions = np.clip(positions, lower_bound, upper_bound)
+    positions_history = []
+    best_fitness_history = []
+
+    if show_logs:
+        print(f"Starting GSA... (Searching for the minimum of Rastrigin function in {max_iter} iterations)")
+        print("-" * 80)
+
+    for t in range(max_iter):
+        positions_history.append(positions.copy())
+        fitness_values = np.array([fitness_function(p) for p in positions])
+        
+        current_best_fitness = np.min(fitness_values)
+        current_worst_fitness = np.max(fitness_values)
+        
+        if current_best_fitness < best_agent_fitness:
+            best_agent_fitness = current_best_fitness
+            best_agent_position = positions[np.argmin(fitness_values)].copy()
+
+        best_fitness_history.append(best_agent_fitness)
+
+        m_normalized = (fitness_values - current_worst_fitness) / (current_best_fitness - current_worst_fitness + epsilon)
+        masses = m_normalized / (np.sum(m_normalized) + epsilon)
+
+        G = G0 * math.exp(-alpha * t / max_iter)
+        kbest = round(kbest_initial - (kbest_initial - kbest_final) * (t / max_iter))
+        sorted_indices = np.argsort(fitness_values)
+
+        forces = np.zeros((N, D))
+        for i in range(N):
+            total_force_on_i = np.zeros(D)
+            for j_idx in sorted_indices[0:kbest]:
+                j = j_idx
+                if i != j:
+                    displacement_vec = positions[j] - positions[i]
+                    distance = np.linalg.norm(displacement_vec)
+                    force_ij = G * (masses[i] * masses[j] / (distance + epsilon)) * displacement_vec
+                    total_force_on_i += np.random.rand() * force_ij 
+            forces[i] = total_force_on_i
+        
+        accelerations = forces / (masses[:, np.newaxis] + epsilon)
+        velocities = np.random.rand(N, 1) * velocities + accelerations
+        positions = positions + velocities
+        positions = np.clip(positions, lower_bound, upper_bound)
+        
+        if show_logs and (t+1) % 10 == 0:
+            pos_str = f"[{best_agent_position[0]:.6f}, {best_agent_position[1]:.6f}]"
+            print(f"Iteration {t+1:3d}: Best Solution = {pos_str}, Fitness = {best_agent_fitness:.8f}")
+
+    if show_logs:
+        print("-" * 80)
+        print("GSA has finished.")
+        print(f"The best solution found is: {pos_str}")
+        print(f"The minimum value found is: {best_agent_fitness:.8f}")
+        print("Known minimum is at [0.0, 0.0] with fitness = 0.0")
+        print("-" * 80)
+
+    return best_agent_fitness, best_agent_position, positions_history, best_fitness_history
+
+if __name__ == "__main__":
+    fitness, position, positions_history, best_fitness_history = run_gsa(show_logs=True, seed=42)
     
-    pos_str = f"[{best_agent_position[0]:.6f}, {best_agent_position[1]:.6f}]"
-    print(f"Iteration {t+1:3d} (kbest={kbest:2d}): Best Solution = {pos_str}, Fitness = {best_agent_fitness:.6f}")
+    print("Generating visualizations...")
 
-# --- End of Algorithm ---
-print("-" * 80)
-print("GSA has finished.")
-pos_str = f"[{best_agent_position[0]:.6f}, {best_agent_position[1]:.6f}]"
-print(f"The best solution found is x, y = {pos_str}")
-print(f"The minimum value of the function is f(x,y) = {best_agent_fitness:.6f}")
-print("-" * 80)
-print("Generating visualizations...")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(script_dir, "gsa2d_vi_output")
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Output files will be saved in '{output_dir}/'")
 
-# --- 4. Visualization Section ---
+    max_iter = 100
+    lower_bound = -5.12
+    upper_bound = 5.12
+    x_plot = np.linspace(lower_bound, upper_bound, 400)
+    y_plot = np.linspace(lower_bound, upper_bound, 400)
+    X, Y = np.meshgrid(x_plot, y_plot)
+    Z = fitness_function(np.array([X, Y]))
 
-# --- Prepare data for the landscape plots ---
-x_plot = np.linspace(lower_bound, upper_bound, 200)
-y_plot = np.linspace(lower_bound, upper_bound, 200)
-X, Y = np.meshgrid(x_plot, y_plot)
-Z = np.array([fitness_function([x, y]) for x, y in zip(np.ravel(X), np.ravel(Y))])
-Z = Z.reshape(X.shape)
+    # --- FIGURE A: Convergence Graph ---
+    fig_conv, ax_conv = plt.subplots(figsize=(10, 6))
+    iterations_to_plot = np.arange(1, max_iter + 1)
+    ax_conv.plot(iterations_to_plot, best_fitness_history)
+    ax_conv.set_title('Convergence of GSA on Rastrigin Function')
+    ax_conv.set_xlabel('Iteration k'); ax_conv.set_ylabel('Value of the Objective Function (Best Fitness)')
+    ax_conv.set_yscale('log'); ax_conv.grid(True)
+    plt.tight_layout()
+    fig_conv.savefig(os.path.join(output_dir, 'convergence_100iter.png'))
 
-# --- A) Static 3D Surface and 2D Contour Plot of the Function ---
-fig_static = plt.figure(figsize=(16, 7))
-ax1 = fig_static.add_subplot(1, 2, 1, projection='3d')
-ax1.plot_surface(X, Y, Z, cmap='viridis', alpha=0.8)
-ax1.set_title('3D Surface of Rastrigin Function')
-ax1.set_xlabel('x')
-ax1.set_ylabel('y')
-ax1.set_zlabel('f(x, y)')
-ax2 = fig_static.add_subplot(1, 2, 2)
-contour = ax2.contourf(X, Y, Z, levels=50, cmap='viridis')
-ax2.set_title('2D Contour Plot of Rastrigin Function')
-ax2.set_xlabel('x')
-ax2.set_ylabel('y')
-fig_static.colorbar(contour, ax=ax2, label='Fitness Value')
-plt.tight_layout()
+    # --- FIGURE B: Animation of First 20 Iterations ---
+    fig_anim_20, ax_anim_20 = plt.subplots(figsize=(8, 7))
+    ax_anim_20.contourf(X, Y, Z, levels=50, cmap='viridis', alpha=0.7)
+    ax_anim_20.set_title('GSA Agent Movement (First 20 Iterations)')
+    ax_anim_20.set_xlabel('x1'); ax_anim_20.set_ylabel('x2')
+    ax_anim_20.plot(0, 0, 'r*', markersize=15, label='Global Minimum') 
+    scatter_20 = ax_anim_20.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='white', s=25)
+    iter_text_20 = ax_anim_20.text(0.02, 0.95, '', transform=ax_anim_20.transAxes, color='white', fontsize=12,
+                                   bbox=dict(facecolor='black', alpha=0.5))
+    ax_anim_20.legend()
+    def update_anim_20(frame):
+        scatter_20.set_offsets(positions_history[frame])
+        iter_text_20.set_text(f'Iteration: {frame + 1}/20')
+        return scatter_20, iter_text_20
+    animation_20 = FuncAnimation(fig_anim_20, update_anim_20, frames=20, interval=200, blit=True)
+    animation_20.save(os.path.join(output_dir, 'gsa_rastrigin_anim_20iter.gif'), writer='pillow', fps=5)
+    print("Animation of first 20 iterations saved successfully.")
 
-# --- B) Snapshots of Agent Positions ---
-# สร้าง snapshot_iters ให้กระจายเท่าๆ กันใน 100 รอบ
-snapshot_iters = np.linspace(1, max_iter, num=6, dtype=int)  # [1, 20, 40, 60, 80, 100]
-fig_snapshots, axes = plt.subplots(1, len(snapshot_iters), figsize=(25, 5))
-fig_snapshots.suptitle('Agent Positions at Different Iterations', fontsize=16)
-for i, iter_num in enumerate(snapshot_iters):
-    ax = axes[i]
-    ax.contourf(X, Y, Z, levels=50, cmap='viridis', alpha=0.7)
-    # ตรวจสอบ index ไม่เกิน positions_history
-    idx = min(iter_num - 1, len(positions_history) - 1)
-    agent_pos = positions_history[idx]
-    ax.scatter(agent_pos[:, 0], agent_pos[:, 1], color='red', s=15, zorder=2)
-    ax.set_title(f'Iteration: {iter_num}')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_xlim([lower_bound, upper_bound])
-    ax.set_ylim([lower_bound, upper_bound])
-plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    # --- FIGURE C: Animation of Full 100 Iterations ---
+    fig_anim_100, ax_anim_100 = plt.subplots(figsize=(8, 7))
+    ax_anim_100.contourf(X, Y, Z, levels=50, cmap='viridis', alpha=0.7)
+    ax_anim_100.set_title(f'GSA Agent Movement (Full {max_iter} Iterations)')
+    ax_anim_100.set_xlabel('x1'); ax_anim_100.set_ylabel('x2')
+    ax_anim_100.plot(0, 0, 'r*', markersize=15, label='Global Minimum')
+    scatter_100 = ax_anim_100.scatter(positions_history[0][:, 0], positions_history[0][:, 1], c='white', s=25)
+    iter_text_100 = ax_anim_100.text(0.02, 0.95, '', transform=ax_anim_100.transAxes, color='white', fontsize=12,
+                                       bbox=dict(facecolor='black', alpha=0.5))
+    ax_anim_100.legend()
+    def update_anim_100(frame):
+        scatter_100.set_offsets(positions_history[frame])
+        iter_text_100.set_text(f'Iteration: {frame + 1}/{max_iter}')
+        return scatter_100, iter_text_100
+    animation_100 = FuncAnimation(fig_anim_100, update_anim_100, frames=max_iter, interval=100, blit=True)
+    animation_100.save(os.path.join(output_dir, 'gsa_rastrigin_anim_100iter.gif'), writer='pillow', fps=10)
+    print(f"Animation of full {max_iter} iterations saved successfully.")
+    
+    # --- FIGURE D: Static Plot of Final Positions at 100 Iterations ---
+    fig_final_100, ax_final_100 = plt.subplots(figsize=(8, 7))
+    ax_final_100.contourf(X, Y, Z, levels=50, cmap='viridis', alpha=0.7)
+    ax_final_100.set_title(f'Final Agent Positions at Iteration {max_iter}')
+    ax_final_100.set_xlabel('x1'); ax_final_100.set_ylabel('x2')
+    final_positions_100 = positions_history[-1]
+    ax_final_100.scatter(final_positions_100[:, 0], final_positions_100[:, 1], c='red', s=35, label=f'Agents at Iteration {max_iter}')
+    ax_final_100.plot(0, 0, 'y*', markersize=15, label='Global Minimum')
+    ax_final_100.legend()
+    plt.tight_layout()
+    fig_final_100.savefig(os.path.join(output_dir, 'final_positions_100iter.png'))
 
-# --- C) Animation of Agent Movement ---
-fig_anim, ax_anim = plt.subplots(figsize=(8, 7))
-ax_anim.contourf(X, Y, Z, levels=50, cmap='viridis', alpha=0.7)
-ax_anim.set_xlim([lower_bound, upper_bound])
-ax_anim.set_ylim([lower_bound, upper_bound])
-ax_anim.set_xlabel('x')
-ax_anim.set_ylabel('y')
-ax_anim.set_title('GSA Agent Movement on Rastrigin Function')
-scatter = ax_anim.scatter(positions_history[0][:, 0], positions_history[0][:, 1], color='red', s=20)
-iter_text = ax_anim.text(0.02, 0.95, '', transform=ax_anim.transAxes, color='white', fontsize=12)
+    plt.show()
 
-def update(frame):
-    scatter.set_offsets(positions_history[frame])
-    iter_text.set_text(f'Iteration: {frame + 1}/{max_iter}')
-    return scatter, iter_text
-
-animation = FuncAnimation(fig_anim, update, frames=max_iter, interval=100, blit=True)
-
-try:
-    animation.save('gsa_animation.gif', writer='pillow', fps=10)
-    print("Animation saved successfully as gsa_animation.gif")
-except Exception as e:
-    print(f"Could not save animation. Error: {e}")
-    print("Please make sure you have Pillow installed (`pip install Pillow`)")
-
-plt.show()

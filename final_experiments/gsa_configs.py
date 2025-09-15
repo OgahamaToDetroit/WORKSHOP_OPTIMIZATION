@@ -8,6 +8,7 @@ def rastrigin_func(position):
 
 def rosenbrock_func(position):
     """N-Dimensional Rosenbrock function."""
+    # This formula is for D>=2, which matches our use case.
     return np.sum(100.0 * (position[1:] - position[:-1]**2.0)**2.0 + (1 - position[:-1])**2.0)
 
 # --- 2. Function Configurations Dictionary ---
@@ -55,4 +56,3 @@ FUNCTION_CONFIG = {
         'alpha': 15       # As per original file
     }
 }
-

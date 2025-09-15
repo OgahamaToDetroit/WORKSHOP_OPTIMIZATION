@@ -10,7 +10,7 @@ def main():
     passing the state from one block to the next to observe long-term convergence.
     """
     # --- CHOOSE WHICH CONFIGURATION TO TEST HERE ---
-    CONFIG_TO_TEST = 'RASTRIGIN_20D' 
+    CONFIG_TO_TEST = 'RASTRIGIN_2D_VI' 
     # Options: 'ROSENBROCK_1000', 'ROSENBROCK_100', 'RASTRIGIN_20D', 'RASTRIGIN_2D_VI'
     # -----------------------------------------------
 
@@ -22,17 +22,12 @@ def main():
     print(f"  CONFIGURATION: {config['name']}")
     print("="*60)
     
-    # This will store the final state of the agents after each block
     saved_state = None 
-    
-    # This will store the best fitness found at the end of each block
     fitness_over_blocks = []
 
     for i in range(num_blocks):
         print(f"\n----- Starting Block {i+1}/{num_blocks} (Iterations: {config['max_iter']}) -----")
         
-        # The 'saved_state' is passed to the next run.
-        # For the first run (i=0), saved_state is None, so GSA starts randomly.
         best_fitness, saved_state = run_gsa(
             objective_func=config['func'],
             dim=config['dim'],
@@ -54,15 +49,15 @@ def main():
     std_dev_fitness = np.std(fitness_array)
 
     print("\n" + "="*60)
-    print("  STATISTICAL ANALYSIS OF BLOCK RESULTS")
+    print("  ITERATIVE ANALYSIS SUMMARY")
     print("="*60)
-    print(f"  Average of final fitness values: {avg_fitness:.8f}")
-    print(f"  Standard Deviation of final values: {std_dev_fitness:.8f}")
+    print(f"  Average of block-end fitness values: {avg_fitness:.8f}")
+    print(f"  Standard Deviation of block-end values: {std_dev_fitness:.8f}")
     print(f"  Final Best Fitness after all blocks: {fitness_array[-1]:.8f}")
     print("\n" + "="*60)
 
     # --- Generate and Save Line Chart of Improvement ---
-    output_dir = f"gsa_{CONFIG_TO_TEST.lower()}_iterative_run"
+    output_dir = f"iterative_run_output/{CONFIG_TO_TEST.lower()}"
     os.makedirs(output_dir, exist_ok=True)
     
     plt.figure(figsize=(12, 7))
@@ -86,4 +81,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

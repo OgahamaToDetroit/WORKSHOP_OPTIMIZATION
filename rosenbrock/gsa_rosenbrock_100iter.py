@@ -95,7 +95,12 @@ if __name__ == "__main__":
     fitness, position, positions_history, best_fitness_history = run_gsa(show_logs=True, seed=42)
     
     print("Generating visualizations...")
-    output_dir = "gsa_rosenbrock_100_output"
+
+    # --- CORRECTED PATH LOGIC ---
+    # Get the absolute path of the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Create the output directory inside the script's directory
+    output_dir = os.path.join(script_dir, "gsa_rosenbrock_100_output")
     os.makedirs(output_dir, exist_ok=True)
     print(f"Output files will be saved in '{output_dir}/'")
 

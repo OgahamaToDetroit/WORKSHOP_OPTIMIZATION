@@ -1,7 +1,6 @@
 import numpy as np
 import math
 
-# BUG FIX: Added 'initial_state=None' to the function definition
 def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, initial_state=None):
     """
     A universal GSA engine that can accept an initial state and return a final state.
@@ -61,9 +60,8 @@ def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, initi
         
     final_state = {'positions': positions, 'velocities': velocities}
     
-    # We need to re-evaluate the final best fitness after the last move
+    # Re-evaluate the final best fitness after the last move
     final_fitness_values = np.array([objective_func(p) for p in positions])
     final_best_fitness = np.min(final_fitness_values)
 
     return final_best_fitness, final_state
-
