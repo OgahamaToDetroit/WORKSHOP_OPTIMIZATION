@@ -171,4 +171,3 @@ if __name__ == "__main__":
     fig_final_1000.savefig(os.path.join(output_dir, 'final_positions_1000iter.png'))
     
     plt.show()
-
