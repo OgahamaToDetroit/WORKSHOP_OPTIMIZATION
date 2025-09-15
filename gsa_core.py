@@ -1,14 +1,11 @@
 import numpy as np
 import math
 
-def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, show_logs=False, seed=None):
+# BUG FIX: Added 'initial_state=None' to the function definition
+def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, initial_state=None):
     """
-    A universal GSA engine that can optimize any given function.
+    A universal GSA engine that can accept an initial state and return a final state.
     """
-    if seed is not None:
-        np.random.seed(seed)
-    
-    # --- Parameters ---
     D = dim
     N = n_agents
     G0 = g0
@@ -18,26 +15,26 @@ def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, show_
     kbest_final = 1
     
     # --- Initialization ---
-    positions = lower_bound + (upper_bound - lower_bound) * np.random.rand(N, D)
-    velocities = np.zeros((N, D))
-    best_agent_position = np.zeros(D)
-    best_agent_fitness = float('inf')
+    if initial_state is None:
+        # Start from a random state if none is provided
+        positions = lower_bound + (upper_bound - lower_bound) * np.random.rand(N, D)
+        velocities = np.zeros((N, D))
+    else:
+        # Continue from the previous state
+        positions = initial_state['positions']
+        velocities = initial_state['velocities']
 
-    if show_logs:
-        print(f"Starting GSA (D={D}, max_iter={max_iter})...")
-        print("-" * 80)
+    best_agent_fitness = float('inf')
 
     # --- Main Loop ---
     for t in range(max_iter):
         fitness_values = np.array([objective_func(p) for p in positions])
         
         current_best_fitness = np.min(fitness_values)
-        current_worst_fitness = np.max(fitness_values)
-        
         if current_best_fitness < best_agent_fitness:
             best_agent_fitness = current_best_fitness
-            best_agent_position = positions[np.argmin(fitness_values)].copy()
 
+        current_worst_fitness = np.max(fitness_values)
         m_normalized = (fitness_values - current_worst_fitness) / (current_best_fitness - current_worst_fitness + epsilon)
         masses = m_normalized / (np.sum(m_normalized) + epsilon)
 
@@ -62,12 +59,11 @@ def run_gsa(objective_func, dim, bounds, max_iter, g0, alpha, n_agents=50, show_
         positions = positions + velocities
         positions = np.clip(positions, lower_bound, upper_bound)
         
-        if show_logs and (t + 1) % 100 == 0:
-            print(f"Iteration {t+1:4d}: Best Fitness = {best_agent_fitness:.8f}")
+    final_state = {'positions': positions, 'velocities': velocities}
+    
+    # We need to re-evaluate the final best fitness after the last move
+    final_fitness_values = np.array([objective_func(p) for p in positions])
+    final_best_fitness = np.min(final_fitness_values)
 
-    if show_logs:
-        print("-" * 80)
-        print("GSA has finished.")
-        print(f"The best fitness found is: {best_agent_fitness:.8f}")
+    return final_best_fitness, final_state
 
-    return best_agent_fitness, best_agent_position
