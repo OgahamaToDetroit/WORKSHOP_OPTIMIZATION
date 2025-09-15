@@ -1,5 +1,5 @@
 import numpy as np
-from gsa_rosenbrock import run_gsa
+from gsa_rastrigin_nd import run_gsa
 
 def main():
     """
